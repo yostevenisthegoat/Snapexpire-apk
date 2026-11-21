@@ -14,6 +14,7 @@ import android.provider.MediaStore
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.data.ScreenshotRepository
+import com.example.worker.ExpirationScheduler
 import com.example.worker.SnapFadeNotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,28 +56,34 @@ class ScreenshotMonitorService : Service() {
                 super.onChange(selfChange, uri)
                 debounceJob?.cancel()
                 debounceJob = serviceScope.launch {
-                    delay(450L)
-                    val prefs = repository.getPreferencesSnapshot()
-                    if (!prefs.autoDetectEnabled) return@launch
+                    val delays = longArrayOf(350L, 1_100L, 1_500L)
+                    for (waitMs in delays) {
+                        delay(waitMs)
+                        val prefs = repository.getPreferencesSnapshot()
+                        if (!prefs.autoDetectEnabled) return@launch
 
-                    val detected = repository.processNewMediaStoreScreenshots(
-                        notifyUser = false,
-                        emitLiveEvent = false
-                    )
-                    for (item in detected) {
-                        if (prefs.overlayEnabled && repository.scanner.canDrawOverlays()) {
-                            val shown = overlayManager.showOverlay(item, prefs.themeMode)
-                            if (!shown) {
-                                SnapFadeNotificationHelper.showNewScreenshotNotification(
-                                    this@ScreenshotMonitorService,
-                                    item
-                                )
+                        val detected = repository.processNewMediaStoreScreenshots(
+                            notifyUser = false,
+                            emitLiveEvent = false
+                        )
+                        if (detected.isNotEmpty()) {
+                            for (item in detected) {
+                                if (prefs.overlayEnabled && repository.scanner.canDrawOverlays()) {
+                                    val shown = overlayManager.showOverlay(item, prefs.themeMode)
+                                    if (!shown) {
+                                        SnapFadeNotificationHelper.showNewScreenshotNotification(
+                                            this@ScreenshotMonitorService,
+                                            item
+                                        )
+                                    }
+                                } else {
+                                    SnapFadeNotificationHelper.showNewScreenshotNotification(
+                                        this@ScreenshotMonitorService,
+                                        item
+                                    )
+                                }
                             }
-                        } else {
-                            SnapFadeNotificationHelper.showNewScreenshotNotification(
-                                this@ScreenshotMonitorService,
-                                item
-                            )
+                            break
                         }
                     }
                 }
@@ -100,6 +107,11 @@ class ScreenshotMonitorService : Service() {
             return START_NOT_STICKY
         }
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        ExpirationScheduler(applicationContext).enqueueImmediateServiceRecovery()
     }
 
     override fun onDestroy() {

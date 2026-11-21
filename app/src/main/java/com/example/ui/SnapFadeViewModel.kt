@@ -56,6 +56,7 @@ data class SnapFadeUiState(
     val hasNotificationPermission: Boolean = false,
     val canManageMedia: Boolean = false,
     val canDrawOverlays: Boolean = false,
+    val isIgnoringBatteryOptimizations: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
     val isScanning: Boolean = false
 )
@@ -147,6 +148,7 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
             hasNotificationPermission = repository.scanner.hasNotificationPermission(),
             canManageMedia = repository.scanner.canManageMedia(),
             canDrawOverlays = repository.scanner.canDrawOverlays(),
+            isIgnoringBatteryOptimizations = repository.scanner.isIgnoringBatteryOptimizations(),
             nowMillis = now,
             isScanning = aux.isScanning
         )
@@ -157,7 +159,8 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
             hasMediaPermission = repository.scanner.hasMediaReadPermission(),
             hasNotificationPermission = repository.scanner.hasNotificationPermission(),
             canManageMedia = repository.scanner.canManageMedia(),
-            canDrawOverlays = repository.scanner.canDrawOverlays()
+            canDrawOverlays = repository.scanner.canDrawOverlays(),
+            isIgnoringBatteryOptimizations = repository.scanner.isIgnoringBatteryOptimizations()
         )
     )
 

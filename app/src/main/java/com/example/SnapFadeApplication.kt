@@ -44,13 +44,16 @@ class SnapFadeApplication : Application(), Configuration.Provider {
                 if (ScreenshotMonitorService.isRunning) return
                 debounceJob?.cancel()
                 debounceJob = appScope.launch {
-                    delay(450L)
-                    val prefs = repository.getPreferencesSnapshot()
-                    if (prefs.autoDetectEnabled) {
-                        repository.processNewMediaStoreScreenshots(
+                    val delays = longArrayOf(350L, 1_100L)
+                    for (waitMs in delays) {
+                        delay(waitMs)
+                        val prefs = repository.getPreferencesSnapshot()
+                        if (!prefs.autoDetectEnabled) return@launch
+                        val found = repository.processNewMediaStoreScreenshots(
                             notifyUser = true,
                             emitLiveEvent = true
                         )
+                        if (found.isNotEmpty()) break
                     }
                 }
             }

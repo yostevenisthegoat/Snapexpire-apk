@@ -8,6 +8,7 @@ import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
@@ -54,6 +55,11 @@ class MediaStoreScreenshotScanner(private val context: Context) {
     }
 
     fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(context)
+
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+        return pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
 
     suspend fun scanScreenshots(
         limit: Int = 50,

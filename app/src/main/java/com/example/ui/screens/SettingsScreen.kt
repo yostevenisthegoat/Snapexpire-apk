@@ -62,6 +62,7 @@ fun SettingsScreen(
     onRequestMediaPermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     onOpenOverlaySettings: () -> Unit,
+    onOpenBatteryOptimizationSettings: () -> Unit,
     onOpenManageMediaSettings: () -> Unit,
     onScanDeviceNow: () -> Unit,
     onClearExpiredHistory: () -> Unit,
@@ -265,6 +266,22 @@ fun SettingsScreen(
                     buttonLabel = if (uiState.canDrawOverlays) "Manage" else "Allow",
                     onClick = onOpenOverlaySettings,
                     buttonTag = "settings_overlay_permission_button",
+                    alwaysShowButton = true
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                PermissionRow(
+                    title = "Unrestricted Background Battery",
+                    subtitle = if (uiState.isIgnoringBatteryOptimizations) {
+                        "Unrestricted — keeps detection active anytime even when app is closed"
+                    } else {
+                        "Recommended — set battery usage to Unrestricted so Android doesn't pause SnapFade in the background"
+                    },
+                    granted = uiState.isIgnoringBatteryOptimizations,
+                    buttonLabel = if (uiState.isIgnoringBatteryOptimizations) "Manage" else "Configure",
+                    onClick = onOpenBatteryOptimizationSettings,
+                    buttonTag = "settings_battery_permission_button",
                     alwaysShowButton = true
                 )
 

@@ -18,6 +18,9 @@ class ScreenshotMonitorWorker(
             return Result.success()
         }
 
+        // Ensure foreground monitor service stays alive when overlay is enabled
+        repository.syncMonitorService()
+
         val showOverlay = prefs.overlayEnabled && repository.scanner.canDrawOverlays()
         val newlyAdded = repository.processNewMediaStoreScreenshots(
             notifyUser = !showOverlay,
@@ -34,7 +37,7 @@ class ScreenshotMonitorWorker(
             }
         }
 
-        // Re-arm TriggerContentUri so background detection continues
+        // Re-arm TriggerContentUri so background detection continues even if service is stopped
         ExpirationScheduler(applicationContext).armMediaStoreObserver()
         return Result.success()
     }

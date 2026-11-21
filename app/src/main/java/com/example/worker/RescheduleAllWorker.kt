@@ -11,9 +11,10 @@ class RescheduleAllWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val scheduler = ExpirationScheduler(applicationContext)
-        scheduler.rescheduleAllPending()
-        ScreenshotRepository.getInstance(applicationContext).reconcileMissingFiles()
+        val repository = ScreenshotRepository.getInstance(applicationContext)
+        repository.scheduler.rescheduleAllPending()
+        repository.reconcileMissingFiles()
+        repository.syncMonitorService()
         return Result.success()
     }
 }

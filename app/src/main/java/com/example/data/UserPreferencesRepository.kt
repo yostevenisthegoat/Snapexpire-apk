@@ -24,6 +24,7 @@ data class UserPreferences(
     val notifyBeforeExpireMinutes: Int = 15,
     val confirmBeforeImmediateDelete: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val monitorStartAnchorMillis: Long = 0L,
     val lastMediaScanMillis: Long = 0L
 )
 
@@ -36,6 +37,7 @@ class UserPreferencesRepository(private val context: Context) {
         val NOTIFY_BEFORE_MINUTES = intPreferencesKey("notify_before_minutes")
         val CONFIRM_BEFORE_DELETE = booleanPreferencesKey("confirm_before_delete")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val MONITOR_START_ANCHOR_MILLIS = longPreferencesKey("monitor_start_anchor_millis")
         val LAST_MEDIA_SCAN_MILLIS = longPreferencesKey("last_media_scan_millis")
     }
 
@@ -49,6 +51,7 @@ class UserPreferencesRepository(private val context: Context) {
             notifyBeforeExpireMinutes = prefs[Keys.NOTIFY_BEFORE_MINUTES] ?: 15,
             confirmBeforeImmediateDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
             themeMode = themeMode,
+            monitorStartAnchorMillis = prefs[Keys.MONITOR_START_ANCHOR_MILLIS] ?: 0L,
             lastMediaScanMillis = prefs[Keys.LAST_MEDIA_SCAN_MILLIS] ?: 0L
         )
     }
@@ -92,6 +95,17 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setThemeMode(mode: ThemeMode) {
         context.snapFadeDataStore.edit { prefs ->
             prefs[Keys.THEME_MODE] = mode.name
+        }
+    }
+
+    suspend fun ensureMonitorStartAnchor(nowMillis: Long) {
+        context.snapFadeDataStore.edit { prefs ->
+            if ((prefs[Keys.MONITOR_START_ANCHOR_MILLIS] ?: 0L) == 0L) {
+                prefs[Keys.MONITOR_START_ANCHOR_MILLIS] = nowMillis
+            }
+            if ((prefs[Keys.LAST_MEDIA_SCAN_MILLIS] ?: 0L) == 0L) {
+                prefs[Keys.LAST_MEDIA_SCAN_MILLIS] = nowMillis
+            }
         }
     }
 

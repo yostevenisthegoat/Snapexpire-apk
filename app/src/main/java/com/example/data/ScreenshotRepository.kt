@@ -49,13 +49,12 @@ class ScreenshotRepository private constructor(private val context: Context) {
     suspend fun setAutoDetectEnabled(enabled: Boolean) {
         prefsRepo.setAutoDetectEnabled(enabled)
         if (enabled) {
-            val prefs = prefsRepo.getSnapshot()
-            if (prefs.lastMediaScanMillis == 0L) {
-                prefsRepo.updateLastMediaScanMillis(System.currentTimeMillis())
-            }
+            prefsRepo.ensureMonitorStartAnchor(System.currentTimeMillis())
             scheduler.armMediaStoreObserver()
+            scheduler.armPeriodicWatchdog()
         } else {
             scheduler.disarmMediaStoreObserver()
+            scheduler.disarmPeriodicWatchdog()
         }
         syncMonitorService()
     }
@@ -89,12 +88,11 @@ class ScreenshotRepository private constructor(private val context: Context) {
     suspend fun setThemeMode(mode: ThemeMode) = prefsRepo.setThemeMode(mode)
 
     suspend fun initializeScanAnchorIfNeeded() {
+        prefsRepo.ensureMonitorStartAnchor(System.currentTimeMillis())
         val prefs = prefsRepo.getSnapshot()
-        if (prefs.lastMediaScanMillis == 0L) {
-            prefsRepo.updateLastMediaScanMillis(System.currentTimeMillis())
-        }
         if (prefs.autoDetectEnabled && scanner.hasMediaReadPermission()) {
             scheduler.armMediaStoreObserver()
+            scheduler.armPeriodicWatchdog()
         }
     }
 
@@ -136,15 +134,15 @@ class ScreenshotRepository private constructor(private val context: Context) {
     ): List<ManagedScreenshotEntity> = scanMutex.withLock {
         if (!scanner.hasMediaReadPermission()) return@withLock emptyList()
         val prefs = prefsRepo.getSnapshot()
-        val anchor = if (prefs.lastMediaScanMillis > 0L) {
-            prefs.lastMediaScanMillis
-        } else {
-            System.currentTimeMillis() - 10_000L
-        }
+        val startAnchor = prefs.monitorStartAnchorMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
+        val lastScan = prefs.lastMediaScanMillis.takeIf { it > 0L } ?: startAnchor
+        // Use a 60-second overlap window bounded by monitorStartAnchorMillis so slow IS_PENDING commits
+        // are never missed while pre-install screenshots remain excluded.
+        val queryThreshold = maxOf(startAnchor - 5_000L, lastScan - 60_000L)
 
-        val candidates = scanner.scanScreenshots(limit = 15, capturedAfterMillis = anchor)
+        val candidates = scanner.scanScreenshots(limit = 20, capturedAfterMillis = queryThreshold)
         val newlyInserted = mutableListOf<ManagedScreenshotEntity>()
-        var newestCapture = anchor
+        var newestCapture = lastScan
 
         for (candidate in candidates) {
             if (candidate.capturedAtMillis > newestCapture) {
@@ -175,7 +173,7 @@ class ScreenshotRepository private constructor(private val context: Context) {
             }
         }
 
-        if (newlyInserted.isNotEmpty() || newestCapture > anchor) {
+        if (newlyInserted.isNotEmpty() || newestCapture > lastScan) {
             prefsRepo.updateLastMediaScanMillis(maxOf(newestCapture, System.currentTimeMillis()))
         }
 

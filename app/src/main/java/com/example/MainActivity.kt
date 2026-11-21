@@ -236,6 +236,16 @@ private fun SnapFadeAppScaffold(viewModel: SnapFadeViewModel) {
         overlayPermissionLauncher.launch(intent)
     }
 
+    val launchBatteryOptimizationSettings: () -> Unit = {
+        val batteryIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        val detailsIntent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:${context.packageName}")
+        )
+        runCatching { manageMediaLauncher.launch(batteryIntent) }
+            .onFailure { runCatching { manageMediaLauncher.launch(detailsIntent) } }
+    }
+
     val navItems = remember {
         listOf(
             NavDestinationItem(
@@ -391,6 +401,7 @@ private fun SnapFadeAppScaffold(viewModel: SnapFadeViewModel) {
                                 onRequestMediaPermission = launchMediaPermission,
                                 onRequestNotificationPermission = launchNotificationPermission,
                                 onOpenOverlaySettings = { launchOverlayPermissionSettings(true) },
+                                onOpenBatteryOptimizationSettings = launchBatteryOptimizationSettings,
                                 onOpenManageMediaSettings = launchManageMediaSettings,
                                 onScanDeviceNow = { viewModel.scanDeviceScreenshots() },
                                 onClearExpiredHistory = viewModel::clearExpiredHistory

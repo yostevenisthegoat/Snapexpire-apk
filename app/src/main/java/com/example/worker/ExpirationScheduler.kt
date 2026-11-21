@@ -4,8 +4,10 @@ import android.content.Context
 import android.provider.MediaStore
 import androidx.work.Constraints
 import androidx.work.Data
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.data.ScreenshotStatus
 import com.example.data.SnapFadeDatabase
@@ -77,8 +79,8 @@ class ExpirationScheduler(private val context: Context) {
     fun armMediaStoreObserver() {
         val constraints = Constraints.Builder()
             .addContentUriTrigger(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true)
-            .setTriggerContentUpdateDelay(400L, TimeUnit.MILLISECONDS)
-            .setTriggerContentMaxDelay(2_000L, TimeUnit.MILLISECONDS)
+            .setTriggerContentUpdateDelay(350L, TimeUnit.MILLISECONDS)
+            .setTriggerContentMaxDelay(1_500L, TimeUnit.MILLISECONDS)
             .build()
 
         val request = OneTimeWorkRequestBuilder<ScreenshotMonitorWorker>()
@@ -97,6 +99,32 @@ class ExpirationScheduler(private val context: Context) {
         workManager.cancelUniqueWork(UNIQUE_MEDIA_OBSERVER)
     }
 
+    fun armPeriodicWatchdog() {
+        val request = PeriodicWorkRequestBuilder<MonitorWatchdogWorker>(15L, TimeUnit.MINUTES)
+            .addTag(TAG_WATCHDOG)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            UNIQUE_WATCHDOG,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    fun disarmPeriodicWatchdog() {
+        workManager.cancelUniqueWork(UNIQUE_WATCHDOG)
+    }
+
+    fun enqueueImmediateServiceRecovery() {
+        val request = OneTimeWorkRequestBuilder<RescheduleAllWorker>()
+            .setInitialDelay(1L, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(
+            UNIQUE_RECOVERY,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
     suspend fun rescheduleAllPending() {
         val dao = SnapFadeDatabase.getInstance(context).screenshotDao()
         val prefs = UserPreferencesRepository(context).getSnapshot()
@@ -112,8 +140,10 @@ class ExpirationScheduler(private val context: Context) {
         }
         if (prefs.autoDetectEnabled) {
             armMediaStoreObserver()
+            armPeriodicWatchdog()
         } else {
             disarmMediaStoreObserver()
+            disarmPeriodicWatchdog()
         }
     }
 
@@ -123,7 +153,10 @@ class ExpirationScheduler(private val context: Context) {
         const val TAG_EXPIRATION = "snapfade_expiration"
         const val TAG_WARNING = "snapfade_warning"
         const val TAG_OBSERVER = "snapfade_observer"
+        const val TAG_WATCHDOG = "snapfade_watchdog"
         const val UNIQUE_MEDIA_OBSERVER = "snapfade_mediastore_observer"
+        const val UNIQUE_WATCHDOG = "snapfade_periodic_watchdog"
+        const val UNIQUE_RECOVERY = "snapfade_service_recovery"
 
         fun uniqueExpireWorkName(id: Long) = "expire_screenshot_$id"
         fun uniqueWarnWorkName(id: Long) = "warn_screenshot_$id"

@@ -179,6 +179,7 @@ class ExampleRobolectricTest {
                     onRequestMediaPermission = {},
                     onRequestNotificationPermission = {},
                     onOpenOverlaySettings = {},
+                    onOpenBatteryOptimizationSettings = {},
                     onOpenManageMediaSettings = {},
                     onScanDeviceNow = {},
                     onClearExpiredHistory = {}
