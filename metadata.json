@@ -1,0 +1,6 @@
+{
+  "name": "SnapFade",
+  "description": "Automatic screenshot expiration manager for Android. Your screenshots. Your time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

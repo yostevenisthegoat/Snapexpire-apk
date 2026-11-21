@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SnapFade</string>
+    <string name="app_tagline">Your screenshots. Your time.</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_screenshots">Screenshots</string>
+    <string name="nav_settings">Settings</string>
+    <string name="channel_new_screenshot_name">New Screenshots</string>
+    <string name="channel_new_screenshot_desc">Quick expiration options when a screenshot is captured</string>
+    <string name="channel_warnings_name">Expiring Soon Alerts</string>
+    <string name="channel_warnings_desc">Reminders before scheduled screenshots expire</string>
+    <string name="channel_expiring_name">Expiration Confirmations</string>
+    <string name="channel_expiring_desc">Action prompts when Android requires confirmation to delete expired screenshots</string>
+    <string name="error_delete_failed">Unable to delete screenshot. Please verify permissions.</string>
+</resources>
