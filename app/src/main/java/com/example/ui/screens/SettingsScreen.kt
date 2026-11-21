@@ -54,12 +54,14 @@ import com.example.ui.SnapFadeUiState
 fun SettingsScreen(
     uiState: SnapFadeUiState,
     onToggleAutoDetect: (Boolean) -> Unit,
+    onToggleOverlay: (Boolean) -> Unit,
     onSelectDefaultPreset: (String?) -> Unit,
     onSelectWarningLeadMinutes: (Int) -> Unit,
     onToggleConfirmBeforeDelete: (Boolean) -> Unit,
     onSelectThemeMode: (ThemeMode) -> Unit,
     onRequestMediaPermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
+    onOpenOverlaySettings: () -> Unit,
     onOpenManageMediaSettings: () -> Unit,
     onScanDeviceNow: () -> Unit,
     onClearExpiredHistory: () -> Unit,
@@ -107,6 +109,42 @@ fun SettingsScreen(
                         checked = uiState.preferences.autoDetectEnabled,
                         onCheckedChange = onToggleAutoDetect,
                         modifier = Modifier.testTag("auto_detect_switch")
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = "Overlay Over Other Apps",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = if (uiState.canDrawOverlays) {
+                                "Show a floating expiration card over any app when you take a screenshot"
+                            } else {
+                                "Requires 'Display over other apps' access to pop up while using other apps"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.preferences.overlayEnabled && uiState.canDrawOverlays,
+                        onCheckedChange = { checked ->
+                            if (checked && !uiState.canDrawOverlays) {
+                                onOpenOverlaySettings()
+                            } else {
+                                onToggleOverlay(checked)
+                            }
+                        },
+                        enabled = uiState.preferences.autoDetectEnabled,
+                        modifier = Modifier.testTag("overlay_over_apps_switch")
                     )
                 }
 
@@ -212,6 +250,22 @@ fun SettingsScreen(
                     buttonLabel = "Allow",
                     onClick = onRequestNotificationPermission,
                     buttonTag = "settings_notif_permission_button"
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                PermissionRow(
+                    title = "Display Over Other Apps",
+                    subtitle = if (uiState.canDrawOverlays) {
+                        "Granted — floating overlay popup can appear over other apps"
+                    } else {
+                        "Optional — lets SnapFade detect screenshots in real time and show a floating popup over other apps"
+                    },
+                    granted = uiState.canDrawOverlays,
+                    buttonLabel = if (uiState.canDrawOverlays) "Manage" else "Allow",
+                    onClick = onOpenOverlaySettings,
+                    buttonTag = "settings_overlay_permission_button",
+                    alwaysShowButton = true
                 )
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

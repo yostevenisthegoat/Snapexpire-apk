@@ -170,9 +170,11 @@ fun DashboardScreen(
                                 )
                         )
                         Column {
+                            val overlayReady = statusActive && uiState.preferences.overlayEnabled && uiState.canDrawOverlays
                             Text(
                                 text = when {
                                     !uiState.hasMediaPermission -> "Media permission required"
+                                    overlayReady -> "Overlay detection active"
                                     uiState.preferences.autoDetectEnabled -> "Auto-detection active"
                                     else -> "Auto-detection paused"
                                 },
@@ -181,6 +183,7 @@ fun DashboardScreen(
                             Text(
                                 text = when {
                                     !uiState.hasMediaPermission -> "Allow photo access to detect screenshots automatically"
+                                    overlayReady -> "Floating popup enabled for screenshots in other apps"
                                     uiState.preferences.autoDetectEnabled -> "Watching MediaStore Screenshots folder"
                                     else -> "Enable automatic detection in Settings"
                                 },

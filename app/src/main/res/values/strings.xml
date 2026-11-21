@@ -11,5 +11,7 @@
     <string name="channel_warnings_desc">Reminders before scheduled screenshots expire</string>
     <string name="channel_expiring_name">Expiration Confirmations</string>
     <string name="channel_expiring_desc">Action prompts when Android requires confirmation to delete expired screenshots</string>
+    <string name="channel_monitor_name">Live Overlay Monitor</string>
+    <string name="channel_monitor_desc">Keeps cross-app screenshot detection active when floating overlay is enabled</string>
     <string name="error_delete_failed">Unable to delete screenshot. Please verify permissions.</string>
 </resources>

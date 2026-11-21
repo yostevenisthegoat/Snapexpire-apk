@@ -19,6 +19,7 @@ private val Context.snapFadeDataStore: DataStore<Preferences> by preferencesData
 
 data class UserPreferences(
     val autoDetectEnabled: Boolean = true,
+    val overlayEnabled: Boolean = false,
     val defaultPresetId: String? = null,
     val notifyBeforeExpireMinutes: Int = 15,
     val confirmBeforeImmediateDelete: Boolean = true,
@@ -30,6 +31,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     private object Keys {
         val AUTO_DETECT_ENABLED = booleanPreferencesKey("auto_detect_enabled")
+        val OVERLAY_ENABLED = booleanPreferencesKey("overlay_enabled")
         val DEFAULT_PRESET_ID = stringPreferencesKey("default_preset_id")
         val NOTIFY_BEFORE_MINUTES = intPreferencesKey("notify_before_minutes")
         val CONFIRM_BEFORE_DELETE = booleanPreferencesKey("confirm_before_delete")
@@ -42,6 +44,7 @@ class UserPreferencesRepository(private val context: Context) {
         val themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM)
         UserPreferences(
             autoDetectEnabled = prefs[Keys.AUTO_DETECT_ENABLED] ?: true,
+            overlayEnabled = prefs[Keys.OVERLAY_ENABLED] ?: false,
             defaultPresetId = prefs[Keys.DEFAULT_PRESET_ID]?.takeIf { it.isNotBlank() },
             notifyBeforeExpireMinutes = prefs[Keys.NOTIFY_BEFORE_MINUTES] ?: 15,
             confirmBeforeImmediateDelete = prefs[Keys.CONFIRM_BEFORE_DELETE] ?: true,
@@ -55,6 +58,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setAutoDetectEnabled(enabled: Boolean) {
         context.snapFadeDataStore.edit { prefs ->
             prefs[Keys.AUTO_DETECT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setOverlayEnabled(enabled: Boolean) {
+        context.snapFadeDataStore.edit { prefs ->
+            prefs[Keys.OVERLAY_ENABLED] = enabled
         }
     }
 

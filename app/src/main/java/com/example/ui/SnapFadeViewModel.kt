@@ -55,6 +55,7 @@ data class SnapFadeUiState(
     val hasMediaPermission: Boolean = false,
     val hasNotificationPermission: Boolean = false,
     val canManageMedia: Boolean = false,
+    val canDrawOverlays: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
     val isScanning: Boolean = false
 )
@@ -145,6 +146,7 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
             hasMediaPermission = repository.scanner.hasMediaReadPermission(),
             hasNotificationPermission = repository.scanner.hasNotificationPermission(),
             canManageMedia = repository.scanner.canManageMedia(),
+            canDrawOverlays = repository.scanner.canDrawOverlays(),
             nowMillis = now,
             isScanning = aux.isScanning
         )
@@ -154,7 +156,8 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
         initialValue = SnapFadeUiState(
             hasMediaPermission = repository.scanner.hasMediaReadPermission(),
             hasNotificationPermission = repository.scanner.hasNotificationPermission(),
-            canManageMedia = repository.scanner.canManageMedia()
+            canManageMedia = repository.scanner.canManageMedia(),
+            canDrawOverlays = repository.scanner.canDrawOverlays()
         )
     )
 
@@ -185,6 +188,7 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
                     repository.scheduler.armMediaStoreObserver()
                 }
             }
+            repository.syncMonitorService()
         }
     }
 
@@ -422,6 +426,36 @@ class SnapFadeViewModel(application: Application) : AndroidViewModel(application
     fun setAutoDetectEnabled(enabled: Boolean) {
         viewModelScope.launch {
             repository.setAutoDetectEnabled(enabled)
+        }
+    }
+
+    fun setOverlayEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            if (enabled && !repository.scanner.canDrawOverlays()) {
+                _snackbarMessages.tryEmit("Allow 'Display over other apps' to enable overlay")
+                return@launch
+            }
+            repository.setOverlayEnabled(enabled)
+            _permissionRefreshTrigger.update { it + 1 }
+            if (enabled) {
+                _snackbarMessages.tryEmit("Cross-app screenshot overlay enabled")
+            }
+        }
+    }
+
+    fun onOverlayPermissionResult(enableIfGranted: Boolean) {
+        _permissionRefreshTrigger.update { it + 1 }
+        viewModelScope.launch {
+            val granted = repository.scanner.canDrawOverlays()
+            if (granted && enableIfGranted) {
+                repository.setOverlayEnabled(true)
+                _snackbarMessages.tryEmit("Cross-app screenshot overlay enabled")
+            } else if (!granted) {
+                repository.setOverlayEnabled(false)
+                _snackbarMessages.tryEmit("Overlay permission not granted")
+            } else {
+                repository.syncMonitorService()
+            }
         }
     }
 

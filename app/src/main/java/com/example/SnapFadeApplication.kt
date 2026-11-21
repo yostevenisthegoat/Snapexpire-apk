@@ -8,6 +8,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import androidx.work.Configuration
 import com.example.data.ScreenshotRepository
+import com.example.service.ScreenshotMonitorService
 import com.example.worker.SnapFadeNotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +35,13 @@ class SnapFadeApplication : Application(), Configuration.Provider {
             repository.initializeScanAnchorIfNeeded()
             repository.reconcileMissingFiles()
             repository.scheduler.rescheduleAllPending()
+            repository.syncMonitorService()
         }
 
         mediaObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean, uri: Uri?) {
                 super.onChange(selfChange, uri)
+                if (ScreenshotMonitorService.isRunning) return
                 debounceJob?.cancel()
                 debounceJob = appScope.launch {
                     delay(450L)

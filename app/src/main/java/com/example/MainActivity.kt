@@ -179,6 +179,15 @@ private fun SnapFadeAppScaffold(viewModel: SnapFadeViewModel) {
         viewModel.refreshPermissionsAndReconcile()
     }
 
+    var enableOverlayAfterGrant by remember { mutableStateOf(false) }
+
+    val overlayPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.onOverlayPermissionResult(enableOverlayAfterGrant)
+        enableOverlayAfterGrant = false
+    }
+
     LaunchedEffect(Unit) {
         viewModel.snackbarMessages.collect { msg ->
             snackbarHostState.showSnackbar(msg)
@@ -216,6 +225,15 @@ private fun SnapFadeAppScaffold(viewModel: SnapFadeViewModel) {
             }
             manageMediaLauncher.launch(intent)
         }
+    }
+
+    val launchOverlayPermissionSettings: (Boolean) -> Unit = { autoEnable ->
+        enableOverlayAfterGrant = autoEnable
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${context.packageName}")
+        )
+        overlayPermissionLauncher.launch(intent)
     }
 
     val navItems = remember {
@@ -365,12 +383,14 @@ private fun SnapFadeAppScaffold(viewModel: SnapFadeViewModel) {
                             SettingsScreen(
                                 uiState = uiState,
                                 onToggleAutoDetect = viewModel::setAutoDetectEnabled,
+                                onToggleOverlay = viewModel::setOverlayEnabled,
                                 onSelectDefaultPreset = viewModel::setDefaultPresetId,
                                 onSelectWarningLeadMinutes = viewModel::setNotifyBeforeExpireMinutes,
                                 onToggleConfirmBeforeDelete = viewModel::setConfirmBeforeImmediateDelete,
                                 onSelectThemeMode = viewModel::setThemeMode,
                                 onRequestMediaPermission = launchMediaPermission,
                                 onRequestNotificationPermission = launchNotificationPermission,
+                                onOpenOverlaySettings = { launchOverlayPermissionSettings(true) },
                                 onOpenManageMediaSettings = launchManageMediaSettings,
                                 onScanDeviceNow = { viewModel.scanDeviceScreenshots() },
                                 onClearExpiredHistory = viewModel::clearExpiredHistory

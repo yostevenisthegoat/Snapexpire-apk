@@ -5,11 +5,14 @@ import android.content.IntentSender
 import android.net.Uri
 import com.example.media.DeleteAttemptResult
 import com.example.media.MediaStoreScreenshotScanner
+import com.example.service.ScreenshotMonitorService
 import com.example.worker.ExpirationScheduler
 import com.example.worker.SnapFadeNotificationHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed class DeleteRequestOutcome {
     data class DeletedVerified(val count: Int) : DeleteRequestOutcome()
@@ -27,6 +30,7 @@ class ScreenshotRepository private constructor(private val context: Context) {
     private val prefsRepo = UserPreferencesRepository(context)
     val scanner = MediaStoreScreenshotScanner(context)
     val scheduler = ExpirationScheduler(context)
+    private val scanMutex = Mutex()
 
     private val _liveDetectedScreenshot = MutableSharedFlow<ManagedScreenshotEntity>(
         extraBufferCapacity = 8
@@ -52,6 +56,25 @@ class ScreenshotRepository private constructor(private val context: Context) {
             scheduler.armMediaStoreObserver()
         } else {
             scheduler.disarmMediaStoreObserver()
+        }
+        syncMonitorService()
+    }
+
+    suspend fun setOverlayEnabled(enabled: Boolean) {
+        prefsRepo.setOverlayEnabled(enabled)
+        syncMonitorService()
+    }
+
+    suspend fun syncMonitorService() {
+        val prefs = prefsRepo.getSnapshot()
+        val shouldRunService = prefs.autoDetectEnabled &&
+            prefs.overlayEnabled &&
+            scanner.hasMediaReadPermission() &&
+            scanner.canDrawOverlays()
+        if (shouldRunService) {
+            ScreenshotMonitorService.start(context)
+        } else {
+            ScreenshotMonitorService.stop(context)
         }
     }
 
@@ -110,8 +133,8 @@ class ScreenshotRepository private constructor(private val context: Context) {
     suspend fun processNewMediaStoreScreenshots(
         notifyUser: Boolean,
         emitLiveEvent: Boolean = false
-    ): List<ManagedScreenshotEntity> {
-        if (!scanner.hasMediaReadPermission()) return emptyList()
+    ): List<ManagedScreenshotEntity> = scanMutex.withLock {
+        if (!scanner.hasMediaReadPermission()) return@withLock emptyList()
         val prefs = prefsRepo.getSnapshot()
         val anchor = if (prefs.lastMediaScanMillis > 0L) {
             prefs.lastMediaScanMillis
@@ -164,7 +187,7 @@ class ScreenshotRepository private constructor(private val context: Context) {
                 SnapFadeNotificationHelper.showNewScreenshotNotification(context, entity)
             }
         }
-        return newlyInserted
+        newlyInserted
     }
 
     suspend fun schedulePreset(id: Long, preset: ExpirationPreset) {

@@ -25,6 +25,7 @@ object SnapFadeNotificationHelper {
     const val CHANNEL_NEW_SCREENSHOT = "snapfade_new_screenshot"
     const val CHANNEL_WARNINGS = "snapfade_warnings"
     const val CHANNEL_EXPIRING = "snapfade_expiring"
+    const val CHANNEL_MONITOR_SERVICE = "snapfade_monitor_service"
 
     const val EXTRA_SCREENSHOT_ID = "extra_screenshot_id"
     const val EXTRA_PRESET_ID = "extra_preset_id"
@@ -33,6 +34,7 @@ object SnapFadeNotificationHelper {
     private const val NOTIFICATION_BASE_NEW = 10_000
     private const val NOTIFICATION_BASE_WARN = 20_000
     private const val NOTIFICATION_PENDING_CONFIRM = 30_001
+    const val NOTIFICATION_MONITOR_SERVICE = 40_001
 
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -62,7 +64,52 @@ object SnapFadeNotificationHelper {
             description = context.getString(R.string.channel_expiring_desc)
         }
 
-        manager.createNotificationChannels(listOf(newChannel, warnChannel, expiringChannel))
+        val monitorChannel = NotificationChannel(
+            CHANNEL_MONITOR_SERVICE,
+            context.getString(R.string.channel_monitor_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = context.getString(R.string.channel_monitor_desc)
+            setShowBadge(false)
+        }
+
+        manager.createNotificationChannels(
+            listOf(newChannel, warnChannel, expiringChannel, monitorChannel)
+        )
+    }
+
+    fun buildMonitorServiceNotification(context: Context): android.app.Notification {
+        ensureChannels(context)
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openPendingIntent = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_MONITOR_SERVICE,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val stopIntent = Intent(context, com.example.service.ScreenshotMonitorService::class.java).apply {
+            action = com.example.service.ScreenshotMonitorService.ACTION_STOP
+        }
+        val stopPendingIntent = PendingIntent.getService(
+            context,
+            NOTIFICATION_MONITOR_SERVICE + 1,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(context, CHANNEL_MONITOR_SERVICE)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("SnapFade overlay monitor active")
+            .setContentText("Watching for new screenshots across other apps")
+            .setContentIntent(openPendingIntent)
+            .setOngoing(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(0, "Pause Overlay", stopPendingIntent)
+            .build()
     }
 
     fun showNewScreenshotNotification(context: Context, screenshot: ManagedScreenshotEntity) {

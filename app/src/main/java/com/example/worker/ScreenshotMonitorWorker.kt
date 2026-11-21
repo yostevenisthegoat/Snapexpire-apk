@@ -3,8 +3,8 @@ package com.example.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.data.ExpirationPreset
 import com.example.data.ScreenshotRepository
+import com.example.service.ScreenshotOverlayManager
 
 class ScreenshotMonitorWorker(
     appContext: Context,
@@ -18,11 +18,19 @@ class ScreenshotMonitorWorker(
             return Result.success()
         }
 
-        val newlyAdded = repository.processNewMediaStoreScreenshots(notifyUser = true)
-        val defaultPreset = ExpirationPreset.fromId(prefs.defaultPresetId)
-        if (defaultPreset != null) {
-            newlyAdded.forEach { screenshot ->
-                repository.schedulePreset(screenshot.id, defaultPreset)
+        val showOverlay = prefs.overlayEnabled && repository.scanner.canDrawOverlays()
+        val newlyAdded = repository.processNewMediaStoreScreenshots(
+            notifyUser = !showOverlay,
+            emitLiveEvent = false
+        )
+
+        if (showOverlay && newlyAdded.isNotEmpty()) {
+            val overlayManager = ScreenshotOverlayManager(applicationContext)
+            newlyAdded.forEach { item ->
+                val shown = overlayManager.showOverlay(item, prefs.themeMode)
+                if (!shown) {
+                    SnapFadeNotificationHelper.showNewScreenshotNotification(applicationContext, item)
+                }
             }
         }
 

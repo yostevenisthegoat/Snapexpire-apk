@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.example.data.ManagedScreenshotEntity
 import com.example.data.ScreenshotStatus
@@ -51,6 +52,8 @@ class MediaStoreScreenshotScanner(private val context: Context) {
             false
         }
     }
+
+    fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(context)
 
     suspend fun scanScreenshots(
         limit: Int = 50,

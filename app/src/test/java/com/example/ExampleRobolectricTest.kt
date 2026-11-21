@@ -17,6 +17,7 @@ import com.example.ui.DashboardMetrics
 import com.example.ui.SnapFadeUiState
 import com.example.ui.components.TimeFormatters
 import com.example.ui.screens.DashboardScreen
+import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.SnapFadeTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -161,5 +162,32 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("dashboard_lazy_column")
             .performScrollToNode(hasTestTag("screenshot_item_99"))
         composeTestRule.onNodeWithTag("screenshot_item_99").assertIsDisplayed()
+    }
+
+    @Test
+    fun `settings screen shows overlay over other apps toggle and permission row`() {
+        composeTestRule.setContent {
+            SnapFadeTheme {
+                SettingsScreen(
+                    uiState = SnapFadeUiState(canDrawOverlays = false),
+                    onToggleAutoDetect = {},
+                    onToggleOverlay = {},
+                    onSelectDefaultPreset = {},
+                    onSelectWarningLeadMinutes = {},
+                    onToggleConfirmBeforeDelete = {},
+                    onSelectThemeMode = {},
+                    onRequestMediaPermission = {},
+                    onRequestNotificationPermission = {},
+                    onOpenOverlaySettings = {},
+                    onOpenManageMediaSettings = {},
+                    onScanDeviceNow = {},
+                    onClearExpiredHistory = {}
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Overlay Over Other Apps").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("overlay_over_apps_switch").assertIsDisplayed()
     }
 }
